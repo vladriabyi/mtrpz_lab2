@@ -6,16 +6,17 @@ class Program
     static string text = @"";
     static string path = "", name = "";
 
-    static void Main()
+    static void Main(string[] args)
     {
         try
         {
+            string format = ParseCommandLine(args);
             AskForFile(ref text, ref path, ref name);
             CheckParag(ref text);
             ChangeText();
             CheckIncluded(text);
             AddHTMLStructure(ref text);
-            CreateHTML(text, path, name);
+            CreateHTML(text, path, name, format);
             Console.WriteLine("Файл створено!");
             Console.ReadKey();
         }
@@ -24,6 +25,26 @@ class Program
             Console.Error.WriteLine("Error: " + ex);
             Console.ReadKey();
         }
+    }
+
+    static string ParseCommandLine(string[] args)
+    {
+        string format = "html"; // Default format is HTML
+        foreach (string arg in args)
+        {
+            if (arg.StartsWith("--format="))
+            {
+                format = arg.Substring("--format=".Length).ToLower(); // Extract the format value
+                break;
+            }
+        }
+        return format;
+    }
+
+    static void CreateHTML(string text, string path, string name, string format)
+    {
+        string filePath = path + "\\" + name + "." + format;
+        File.WriteAllText(filePath, text);
     }
 
     static void AskForFile(ref string text, ref string path, ref string name)
