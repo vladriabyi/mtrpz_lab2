@@ -1,407 +1,301 @@
 ﻿using System;
 using System.IO;
 
-class Program
+namespace Program
 {
-    static string text = @"";
-    static string path = "", name = "";
-
-    static void Main(string[] args)
+    public class Program
     {
-        try
-        {
-            string format = ParseCommandLine(args);
-            AskForFile(ref text, ref path, ref name);
-            CheckParag(ref text);
-            ChangeText();
-            CheckIncluded(text);
-            AddHTMLStructure(ref text);
-            CreateHTML(text, path, name, format);
-            Console.WriteLine("Файл створено!");
-            Console.ReadKey();
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine("Error: " + ex);
-            Console.ReadKey();
-        }
-    }
+        static string text = @"";
+        static string path = "", name = "";
 
-    static string ParseCommandLine(string[] args)
-    {
-        string format = "html"; // Default format is HTML
-        foreach (string arg in args)
+        static void Main(string[] args)
         {
-            if (arg.StartsWith("--format="))
+            try
             {
-                format = arg.Substring("--format=".Length).ToLower(); // Extract the format value
-                break;
+                string format = ParseCommandLine(args);
+                AskForFile(ref text, ref path, ref name);
+                CheckParag(ref text);
+                text = ChangeText(text);
+                CheckIncluded(text);
+                AddHTMLStructure(ref text);
+                CreateHTML(text, path, name);
+                Console.WriteLine("Файл створено!");
+                Console.ReadKey();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("Error: " + ex.Message);
+                Console.ReadKey();
             }
         }
-        return format;
-    }
 
-    static void CreateHTML(string text, string path, string name, string format)
-    {
-        string filePath = path + "\\" + name + "." + format;
-        File.WriteAllText(filePath, text);
-    }
-
-    static void AskForFile(ref string text, ref string path, ref string name)
-    {
-        Console.WriteLine("Зазначте шлях до текстового файлу\nНаприклад: \"C:\\Documents\\file.md\"");
-        string filePath = Console.ReadLine();
-        if (Path.GetExtension(filePath) == ".md")
+        public static string ParseCommandLine(string[] args)
         {
-            if (File.Exists(filePath))
+            string format = "html"; // Default format is HTML
+            foreach (string arg in args)
             {
-                text = File.ReadAllText(filePath);
-                path = Path.GetDirectoryName(filePath) + "\\";
-                name = Path.GetFileNameWithoutExtension(filePath);
+                if (arg.StartsWith("--format="))
+                {
+                    format = arg.Substring("--format=".Length).ToLower(); // Extract the format value
+                    break;
+                }
+            }
+            return format;
+        }
+
+        public static void CreateHTML(string text, string path, string name)
+        {
+            string filePath = Path.Combine(path, name + ".html");
+            File.WriteAllText(filePath, text);
+        }
+
+        public static void CreateHTML(string text, string path, string name, string format)
+        {
+            if (format != "html")
+            {
+                throw new ArgumentException("Unsupported format");
+            }
+            string filePath = Path.Combine(path, name + ".html");
+            File.WriteAllText(filePath, text);
+        }
+
+        public static void AskForFile(ref string text, ref string path, ref string name)
+        {
+            Console.WriteLine("Зазначте шлях до текстового файлу\nНаприклад: \"C:\\Documents\\file.md\"");
+            string filePath = Console.ReadLine();
+            if (Path.GetExtension(filePath) == ".md")
+            {
+                if (File.Exists(filePath))
+                {
+                    text = File.ReadAllText(filePath);
+                    path = Path.GetDirectoryName(filePath);
+                    name = Path.GetFileNameWithoutExtension(filePath);
+                }
+                else
+                {
+                    Console.WriteLine("Файл не знайдено, спробуйте ще раз.");
+                    AskForFile(ref text, ref path, ref name);
+                }
             }
             else
             {
-                Console.WriteLine("Файл не знайдено, спробуйте ще раз.");
+                Console.WriteLine("Слід використати файл з розширенням .md. Спробуйте ще раз.");
                 AskForFile(ref text, ref path, ref name);
             }
         }
-        else
-        {
-            Console.WriteLine("Слід використати файл з розширенням .md. Спробуйте ще раз.");
-            AskForFile(ref text, ref path, ref name);
-        }
-    }
 
-    static void ChangeText()
-    {
-        for (int i = 0; i < text.Length; i++)
+        public static string ChangeText(string text)
         {
-            CheckItalic(ref text, i);
-            CheckBold(ref text, i);
-            CheckPref(ref text, ref i);
-            CheckMono(ref text, i);
-        }
-    }
+            string newText = text; // Створюємо нову змінну для зміненого тексту
 
-    static void CheckItalic(ref string text, int i)
-    {
-        if (text[i] == '_')
+            for (int i = 0; i < newText.Length; i++)
+            {
+                CheckItalic(ref newText, i);
+                CheckBold(ref newText, i);
+                CheckPref(ref newText, ref i);
+                CheckMono(ref newText, i);
+            }
+
+            return newText; // Повертаємо змінений текст
+        }
+
+        public static void CheckItalic(ref string text, int i)
         {
-            if (i == 0 || (i > 0 && !char.IsLetterOrDigit(text[i - 1])))
+            if (text[i] == '_')
+            {
+                if (i == 0 || (i > 0 && !char.IsLetterOrDigit(text[i - 1])))
+                {
+                    if (i < text.Length - 1)
+                    {
+                        if (char.IsLetterOrDigit(text[i + 1]))
+                        {
+                            text = text.Remove(i, 1);
+                            text = text.Insert(i, "<i>");
+                            CloseItalic(ref text, i);
+                        }
+                        else if (char.IsPunctuation(text[i + 1]) || text[i + 1] == '`')
+                        {
+                            text = text.Remove(i, 1);
+                            text = text.Insert(i, "<i>");
+                            CloseItalic(ref text, i);
+                        }
+                    }
+                }
+            }
+        }
+
+        public static void CloseItalic(ref string text, int i)
+        {
+            for (int j = i + 1; j < text.Length; j++)
+            {
+                if (text[j] == '_')
+                {
+                    if (j == text.Length - 1 || (j < text.Length - 1 && !char.IsLetterOrDigit(text[j + 1])))
+                    {
+                        if (j > 0)
+                        {
+                            if (char.IsLetterOrDigit(text[j - 1]))
+                            {
+                                text = text.Remove(j, 1);
+                                text = text.Insert(j, "</i>");
+                                break;
+                            }
+                            else if (char.IsPunctuation(text[j - 1]) || text[j - 1] == '`' || text[j - 1] == '>')
+                            {
+                                text = text.Remove(j, 1);
+                                text = text.Insert(j, "</i>");
+                                break;
+                            }
+                        }
+                    }
+                }
+                else if (j == text.Length - 1)
+                {
+                    throw new Exception("Незакриті розділові знаки");
+                }
+            }
+        }
+
+        public static void CheckBold(ref string text, int i)
+        {
+            if (text[i] == '*')
+            {
+                if (i < text.Length - 2 && text[i + 1] == '*')
+                {
+                    if (char.IsLetterOrDigit(text[i + 2]))
+                    {
+                        text = text.Remove(i, 2);
+                        text = text.Insert(i, "<b>");
+                        CloseBold(ref text, i);
+                    }
+                    else if (char.IsPunctuation(text[i + 2]) || text[i + 2] == '`')
+                    {
+                        text = text.Remove(i, 2);
+                        text = text.Insert(i, "<b>");
+                        CloseBold(ref text, i);
+                    }
+                }
+            }
+        }
+
+        public static void CloseBold(ref string text, int i)
+        {
+            for (int j = i + 1; j < text.Length; j++)
+            {
+                if (text[j] == '*')
+                {
+                    if (j > 1 && text[j - 1] == '*')
+                    {
+                        if (char.IsLetterOrDigit(text[j - 2]))
+                        {
+                            text = text.Remove(j - 1, 2);
+                            text = text.Insert(j - 1, "</b>");
+                            break;
+                        }
+                        else if (char.IsPunctuation(text[j - 2]) || text[j - 2] == '`' || text[j - 2] == '>')
+                        {
+                            text = text.Remove(j - 1, 2);
+                            text = text.Insert(j - 1, "</b>");
+                            break;
+                        }
+                    }
+                }
+                else if (j == text.Length - 1)
+                {
+                    throw new Exception("Незакриті розділові знаки");
+                }
+            }
+        }
+
+        public static void CheckMono(ref string text, int i)
+        {
+            if (text[i] == '`')
             {
                 if (i < text.Length - 1)
                 {
                     if (char.IsLetterOrDigit(text[i + 1]))
                     {
                         text = text.Remove(i, 1);
-                        text = text.Insert(i, "<i>");
-                        CloseItalic(ref text, i);
+                        text = text.Insert(i, "<tt>");
+                        CloseMono(ref text, i);
                     }
                     else if (char.IsPunctuation(text[i + 1]) || text[i + 1] == '`')
                     {
                         text = text.Remove(i, 1);
-                        text = text.Insert(i, "<i>");
-                        CloseItalic(ref text, i);
+                        text = text.Insert(i, "<tt>");
+                        CloseMono(ref text, i);
                     }
                 }
             }
         }
-    }
 
-    static void CloseItalic(ref string text, int i)
-    {
-        for (int j = i + 1; j < text.Length; j++)
+        public static void CloseMono(ref string text, int i)
         {
-            if (text[j] == '_')
+            for (int j = i + 1; j < text.Length; j++)
             {
-                if (j == text.Length - 1 || (j < text.Length - 1 && !char.IsLetterOrDigit(text[j + 1])))
+                if (text[j] == '`')
                 {
-                    if (j > 0)
-                    {
-                        if (char.IsLetterOrDigit(text[j - 1]))
-                        {
-                            text = text.Remove(j, 1);
-                            text = text.Insert(j, "</i>");
-                            break;
-                        }
-                        else if (char.IsPunctuation(text[j - 1]) || text[j - 1] == '`' || text[j - 1] == '>')
-                        {
-                            text = text.Remove(j, 1);
-                            text = text.Insert(j, "</i>");
-                            break;
-                        }
-                    }
-                }
-            }
-            else if (j == text.Length - 1)
-            {
-                throw new Exception("Незакриті розділові знаки");
-            }
-        }
-    }
-
-    static void CheckBold(ref string text, int i)
-    {
-        if (text[i] == '*')
-        {
-            if (i < text.Length - 2 && text[i + 1] == '*')
-            {
-                if (char.IsLetterOrDigit(text[i + 2]))
-                {
-                    text = text.Remove(i, 2);
-                    text = text.Insert(i, "<b>");
-                    CloseBold(ref text, i);
-                }
-                else if (char.IsPunctuation(text[i + 2]) || text[i + 2] == '`')
-                {
-                    text = text.Remove(i, 2);
-                    text = text.Insert(i, "<b>");
-                    CloseBold(ref text, i);
-                }
-            }
-        }
-    }
-
-    static void CloseBold(ref string text, int i)
-    {
-        for (int j = i + 1; j < text.Length; j++)
-        {
-            if (text[j] == '*')
-            {
-                if (j > 1 && text[j - 1] == '*')
-                {
-                    if (char.IsLetterOrDigit(text[j - 2]))
-                    {
-                        text = text.Remove(j - 1, 2);
-                        text = text.Insert(j - 1, "</b>");
-                        break;
-                    }
-                    else if (char.IsPunctuation(text[j - 2]) || text[j - 2] == '`' || text[j - 2] == '>')
-                    {
-                        text = text.Remove(j - 1, 2);
-                        text = text.Insert(j - 1, "</b>");
-                        break;
-                    }
-                }
-            }
-            else if (j == text.Length - 1)
-            {
-                throw new Exception("Незакриті розділові знаки");
-            }
-        }
-    }
-
-    static void CheckMono(ref string text, int i)
-    {
-        if (text[i] == '`')
-        {
-            if (i < text.Length - 1)
-            {
-                if (char.IsLetterOrDigit(text[i + 1]))
-                {
-                    text = text.Remove(i, 1);
-                    text = text.Insert(i, "<tt>");
-                    CloseMono(ref text, i);
-                }
-                else if (char.IsPunctuation(text[i + 1]) || text[i + 1] == '`')
-                {
-                    text = text.Remove(i, 1);
-                    text = text.Insert(i, "<tt>");
-                    CloseMono(ref text, i);
-                }
-            }
-        }
-    }
-
-    static void CloseMono(ref string text, int i)
-    {
-        for (int j = i + 1; j < text.Length; j++)
-        {
-            if (text[j] == '`')
-            {
-                if (j > 0)
-                {
-                    if (char.IsLetterOrDigit(text[j - 1]))
-                    {
-                        text = text.Remove(j, 1);
-                        text = text.Insert(j, "</tt>");
-                        break;
-                    }
-                    else if (char.IsPunctuation(text[j - 1]) || text[j - 1] == '`' || text[j - 1] == '>')
-                    {
-                        text = text.Remove(j, 1);
-                        text = text.Insert(j, "</tt>");
-                        break;
-                    }
-                }
-            }
-            else if (j == text.Length - 1)
-            {
-                throw new Exception("Незакриті розділові знаки");
-            }
-        }
-    }
-
-    static void CheckPref(ref string text, ref int i)
-    {
-        if (text[i] == '`')
-        {
-            if (i < text.Length - 3 && text[i + 1] == '`' && text[i + 2] == '`')
-            {
-                text = text.Remove(i, 3);
-                text = text.Insert(i, "<pre>");
-                ClosePref(ref text, ref i);
-            }
-        }
-    }
-
-    static void ClosePref(ref string text, ref int i)
-    {
-        for (int j = i + 1; j < text.Length; j++)
-        {
-            if (text[j] == '`')
-            {
-                if (j > 2 && text[j - 1] == '`' && text[j - 2] == '`')
-                {
-                    text = text.Remove(j - 2, 3);
-                    text = text.Insert(j - 2, "</pre>");
-                    i = j;
-                    break;
-                }
-            }
-            else if (j == text.Length - 1)
-            {
-                throw new Exception("Незакриті розділові знаки");
-            }
-        }
-    }
-
-    static void CheckParag(ref string text)
-    {
-        text = "<p>" + text;
-        CloseParag(ref text, 0);
-    }
-
-    static void CloseParag(ref string text, int i)
-    {
-        for (int j = i; j < text.Length; j++)
-        {
-            if (text[j] == '\n')
-            {
-                if (j < text.Length - 3 && text[j + 2] == '\n')
-                {
-                    text = text.Remove(j - 1, 4);
-                    text = text.Insert(j - 1, "</p><p>");
-                    CloseParag(ref text, j);
-                    break;
-                }
-                else if (j == text.Length - 3 && text[j + 2] == '\n')
-                {
-                    text = text.Remove(j - 1, 4);
-                    text = text + "</p>";
+                    text = text.Remove(j, 1);
+                    text = text.Insert(j, "</tt>");
                     break;
                 }
                 else if (j == text.Length - 1)
                 {
-                    text = text.Remove(j - 1, 2);
-                    text = text + "</p>";
-                    break;
+                    throw new Exception("Незакриті розділові знаки");
                 }
             }
-            else if (j == text.Length - 1)
-            {
-                text = text + "</p>";
-                break;
-            }
         }
-    }
 
-    static void CheckIncluded(string text)
-    {
-        for (int i = 0; i < text.Length; i++)
+        public static void CheckPref(ref string text, ref int i)
         {
-            if (i < text.Length - 2 && text.Substring(i, 3) == "<i>")
+            if (text[i] == '`')
             {
-                CheckIncluded_I(text, i);
-            }
-            else if (i < text.Length - 2 && text.Substring(i, 3) == "<b>")
-            {
-                CheckIncluded_B(text, i);
-            }
-            else if (i < text.Length - 3 && text.Substring(i, 4) == "<tt>")
-            {
-                CheckIncluded_TT(text, i);
+                if (i < text.Length - 2 && text[i + 1] == '`' && text[i + 2] == '`')
+                {
+                    text = text.Remove(i, 3);
+                    text = text.Insert(i, "<pre>");
+                    ClosePref(ref text, i);
+                }
             }
         }
-    }
 
-    static void CheckIncluded_I(string text, int i)
-    {
-        for (int j = i + 2; j < text.Length; j++)
+        public static void ClosePref(ref string text, int i)
         {
-            if (j < text.Length - 3 && text.Substring(j, 4) == "</i>")
+            for (int j = i + 1; j < text.Length; j++)
             {
-                break;
-            }
-            else if (j < text.Length - 2 && text.Substring(j, 3) == "<b>")
-            {
-                throw new Exception("Застосовано пунктуацію");
-            }
-            else if (j < text.Length - 3 && text.Substring(j, 4) == "<tt>")
-            {
-                throw new Exception("Застосовано пунктуацію");
+                if (text[j] == '`')
+                {
+                    if (j < text.Length - 2 && text[j + 1] == '`' && text[j + 2] == '`')
+                    {
+                        text = text.Remove(j, 3);
+                        text = text.Insert(j, "</pre>");
+                        break;
+                    }
+                }
+                else if (j == text.Length - 1)
+                {
+                    throw new Exception("Незакриті розділові знаки");
+                }
             }
         }
-    }
 
-    static void CheckIncluded_B(string text, int i)
-    {
-        for (int j = i + 2; j < text.Length; j++)
+        public static void CheckParag(ref string text)
         {
-            if (j < text.Length - 3 && text.Substring(j, 4) == "</b>")
+            string[] lines = text.Split('\n');
+            text = "";
+
+            foreach (string line in lines)
             {
-                break;
-            }
-            else if (j < text.Length - 2 && text.Substring(j, 3) == "<i>")
-            {
-                throw new Exception("Застосовано пунктуацію");
-            }
-            else if (j < text.Length - 3 && text.Substring(j, 4) == "<tt>")
-            {
-                throw new Exception("Застосовано пунктуацію");
+                if (!string.IsNullOrWhiteSpace(line))
+                {
+                    text += $"<p>{line}</p>";
+                }
             }
         }
-    }
 
-    static void CheckIncluded_TT(string text, int i)
-    {
-        for (int j = i + 2; j < text.Length; j++)
+        public static void AddHTMLStructure(ref string text)
         {
-            if (j < text.Length - 4 && text.Substring(j, 5) == "</tt>")
-            {
-                break;
-            }
-            else if (j < text.Length - 2 && text.Substring(j, 3) == "<b>")
-            {
-                throw new Exception("Застосовано пунктуацію");
-            }
-            else if (j < text.Length - 4 && text.Substring(j, 3) == "<i>")
-            {
-                throw new Exception("Застосовано пунктуацію");
-            }
-        }
-    }
-
-    static void CreateHTML(string text, string path, string name)
-    {
-        string filePath = path + "\\" + name + ".html";
-        File.WriteAllText(filePath, text);
-    }
-
-    static void AddHTMLStructure(ref string text)
-    {
-        text =
-@"<!DOCTYPE html>
+            text = @"<!DOCTYPE html>
 <html lang=""en"">
 <head>
     <meta charset=""UTF-8"">
@@ -409,10 +303,25 @@ class Program
     <title>Document</title>
 </head>
 <body>
-" + text +
-@"</body>
+" + text + @"
+</body>
 </html>";
+        }
+
+        public static void CheckIncluded(string text)
+        {
+            if (text.Contains("<tt>") && text.Contains("</tt>") &&
+                text.Contains("<b>") && text.Contains("</b>") &&
+                text.Contains("<i>") && text.Contains("</i>") &&
+                text.Contains("<pre>") && text.Contains("</pre>") &&
+                text.Contains("<p>") && text.Contains("</p>"))
+            {
+                Console.WriteLine("All tags are included.");
+            }
+            else
+            {
+                Console.WriteLine("Not all tags are included.");
+            }
+        }
     }
-
-
 }
