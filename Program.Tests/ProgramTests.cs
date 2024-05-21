@@ -147,17 +147,6 @@ Test text
 
             // Assert
             Assert.AreEqual(expectedText, text);
-
-            [TestMethod]
-            void TestFailing()
-            {
-                // Arrange
-
-                // Act
-
-                // Assert
-                Assert.Fail("This is a failing test");
-            }
         }
     }
 }
