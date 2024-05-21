@@ -57,3 +57,5 @@
     dotnet test
     ```
 
+## Посилання на revert-commit
+https://github.com/vladriabyi/mtrpz_lab2/commit/6fcef579f6bafdccfa3166a0f270f6f7afeab5e3
